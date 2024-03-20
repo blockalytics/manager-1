@@ -2,6 +2,7 @@ import json, secrets, ast
 from flask import json, Flask, request, g, jsonify
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth, MultiAuth
 from functions.db.mongo import *
+from functions.licensing.ScarletLicenseActivation import *
 from functions.hashing.hashing import *
 from bson.json_util import dumps
 from cachetools import cached, TTLCache
@@ -232,6 +233,37 @@ def verify_token(token):
 def check_page():
     return jsonify({"api_available": True}), 200
 
+@app.route('/api/' + API_VERSION + '/getNodeIp', methods=["POST"])
+def get_node_ip():
+    remote_ip = request.remote_addr
+    return jsonify({"host_ip": remote_ip}), 200
+
+@app.route('/api/' + API_VERSION + '/activate/<scarlet_id>', methods=["POST"])
+def activate_license(scarlet_id):
+
+    li = ScarletLicenseActivation()
+    scarlet_comp = scarlet_id.split(":")
+
+    if len(scarlet_comp) <=1:
+        return jsonify({"scarlet_id_invalid":True}), 404
+
+    app_name = scarlet_comp[0]
+    scarlet_name = scarlet_comp[1]
+
+    app_exists = mongo_connection.mongo_check_app_exists(app_name)
+    if app_exists is True:
+        remote_ip = request.remote_addr
+        status, response = li.activate_license(scarlet_id,app_name,scarlet_name, remote_ip)
+        if not status:
+            http_code =404
+            if "pre_existing_activation" in response.keys():
+                http_code =403
+            return jsonify({"status": status,"response":response}), http_code
+        else:
+            http_code = 201
+            return jsonify({"status": status,"response":response}), http_code
+    else:
+        return jsonify({"app_exists": False}), 404
 
 # create a new app
 @app.route('/api/' + API_VERSION + '/apps/<app_name>', methods=["POST"])

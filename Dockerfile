@@ -5,6 +5,10 @@ FROM python:3.8.3-alpine3.10
 COPY . /www
 RUN chmod +x /www/manager.py
 
+RUN /usr/local/bin/python -m pip install --upgrade pip
+RUN pip install wheel
+RUN pip3 install --no-build-isolation "Cython<3" "pyyaml==5.4.1"
+
 # install required packages - requires build-base due to gevent GCC complier requirements
 RUN apk add --no-cache build-base libffi-dev
 RUN pip install -r /www/requirements.txt
