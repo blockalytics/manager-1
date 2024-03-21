@@ -1,8 +1,6 @@
 import machineid, requests, json, os,click,sys
 from dotenv import load_dotenv
 from pathlib import Path
-from ScarletComposer.scarlets.license.utils import *
-
 
 """
 Activate license to particular machine
@@ -14,10 +12,21 @@ python3 activate_license.py --license_key "" --machine_id ""
 class ScarletLicenseActivation:
 
     def __init__(self):
+        if "REDIS_HOST" not in os.environ.keys():
+            raise Exception("REDIS_HOST not set in os.environ or manager.env")
+        if "REDIS_PORT" not in os.environ.keys():
+            raise Exception("REDIS_PORT not set in os.environ or manager.env")
+        if "REDIS_AUTH_TOKEN" not in os.environ.keys():
+            raise Exception("REDIS_AUTH_TOKEN not set in os.environ or manager.env")
+
         if "KEYGEN_ADD_ACC_ID" not in os.environ.keys():
             raise Exception("KEYGEN_ADD_ACC_ID not set in os.environ or manager.env")
 
         self.KEYGEN_ACC_ID = os.environ["KEYGEN_ADD_ACC_ID"]
+        self.REDIS_HOST = os.environ["REDIS_HOST"]
+        self.REDIS_PORT = os.environ["REDIS_PORT"]
+        self.REDIS_PWD = os.environ["REDIS_AUTH_TOKEN"]
+
 
     def validate_key(self,machine_fingerprint,license_key):
         try:
@@ -121,9 +130,15 @@ class ScarletLicenseActivation:
         machine_fingerprint = machineid.hashed_id(str(scarlet_id))
 
         try:
-            r = redisConnect()
+
+            r = redis.StrictRedis(
+                host=self.REDIS_HOST,
+                port=int(self.REDIS_PORT),
+                password=str(self.REDIS_PWD),
+                )
+
         except Exception as e:
-            return False, {"error": "Trouble connecting to redis"}
+            return False, {"error": "Trouble connecting to redis {}:{}".format(self.REDIS_HOST,self.REDIS_PORT)}
 
         try:
             orig_license_key = r.get(str(node_ip))
