@@ -151,8 +151,7 @@ class ScarletLicenseActivation:
         if not status:
             return status, response
         else:
-            if "activation_not_required" in response.keys():
-                response["node"] = str(node_ip)
+            if "activation_not_required" in response.keys() or "pre_existing_activation" in response.keys():
                 return status, response
 
         validation = response["activation_required"]
