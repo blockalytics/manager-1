@@ -233,7 +233,7 @@ def verify_token(token):
 def check_page():
     return jsonify({"api_available": True}), 200
 
-@app.route('/api/' + API_VERSION + '/getNodeIp', methods=["POST"])
+@app.route('/api/' + API_VERSION + '/getNodeIp', methods=["GET"])
 def get_node_ip():
     remote_ip = request.remote_addr
     return jsonify({"host_ip": remote_ip}), 200

@@ -40,3 +40,4 @@ websocket-client==1.2.1
 Werkzeug==2.0.1
 xmltodict==0.12.0
 py-machineid==0.5.1
+redispy==3.0.0

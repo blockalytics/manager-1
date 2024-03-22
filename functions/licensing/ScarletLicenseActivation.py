@@ -1,4 +1,4 @@
-import machineid, requests, json, os,click,sys
+import machineid, redis,requests, json, os,click,sys
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -77,7 +77,7 @@ class ScarletLicenseActivation:
         return True,{"activation_required":validation}
 
     def keygen_activate(self,machine_fingerprint,license_key,validation,node_ip,app_name,scarlet_name):
-
+        print(license_key)
         try:
             # If we've gotten this far, then our license has not been activated yet,
             # so we should go ahead and activate the current machine.
@@ -99,7 +99,7 @@ class ScarletLicenseActivation:
                                              "ip" : str(node_ip),
                                              "name" : str(app_name),
                                              "metadata" : {
-                                                            str(scarlet_name)
+                                                            "scarlet_name":str(scarlet_name)
                                                           }
                                           },
                             "relationships": {
@@ -115,7 +115,7 @@ class ScarletLicenseActivation:
                 ),
             ).json()
         except Exception as e:
-            return False, {"error":"Could not connect to Keygen API to activate license"}
+            return False, {"error":"Could not connect to Keygen API to activate license returned with error {}".format(str(e))}
 
         # If we get back an error, our activation failed.
         if "errors" in activation:
@@ -138,7 +138,7 @@ class ScarletLicenseActivation:
                 )
 
         except Exception as e:
-            return False, {"error": "Trouble connecting to redis {}:{}".format(self.REDIS_HOST,self.REDIS_PORT)}
+            return False, {"error": "Trouble connecting to redis {}:{} with error {}".format(self.REDIS_HOST,self.REDIS_PORT,str(e))}
 
         try:
             orig_license_key = r.get(str(node_ip))
@@ -157,6 +157,6 @@ class ScarletLicenseActivation:
 
         validation = response["activation_required"]
 
-        status, response = self.keygen_activate(machine_fingerprint,license_key,validation,app_name,scarlet_name,node_ip)
+        status, response = self.keygen_activate(machine_fingerprint,license_key,validation,node_ip,app_name,scarlet_name)
 
         return status, response
