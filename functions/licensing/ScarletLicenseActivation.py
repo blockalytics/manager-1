@@ -1,6 +1,7 @@
 import machineid, redis,requests, json, os,click,sys
 from dotenv import load_dotenv
 from pathlib import Path
+from hashlib import sha256
 
 """
 Activate license to particular machine
@@ -127,8 +128,10 @@ class ScarletLicenseActivation:
 
     def activate_license(self,scarlet_id,app_name,scarlet_name,node_ip):
 
-        machine_fingerprint = machineid.hashed_id(str(scarlet_id))
-
+        try:
+            machine_fingerprint = sha256(str(scarlet_id).encode('utf-8')).hexdigest() #machineid.hashed_id(str(scarlet_id))
+        except Exception as e:
+            return False, {"error": "Trouble obtaining machine fingerprint for scarlet_id {}, returned with error {}".format(scarlet_id,e)}
         try:
 
             r = redis.StrictRedis(
