@@ -23,6 +23,6 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 80
 
 # and running it
-#CMD ["gunicorn" ,"--config", "/etc/gunicorn/config.py", "manager:app"]
+CMD ["gunicorn" ,"--config", "/etc/gunicorn/config.py", "manager:app"]
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+#ENTRYPOINT ["tail", "-f", "/dev/null"]

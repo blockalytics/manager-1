@@ -57,7 +57,7 @@ class ScarletLicenseActivation:
         # If the license is valid for the current machine, that means it has
         # already been activated. We can return early.
         if validation["meta"]["valid"]:
-            return False, {"pre_existing_activation": "license has already been activated on this machine"}
+            return True, {"pre_existing_activation": "license has already been activated on this machine"}
 
         # Otherwise, we need to determine why the current license is not valid,
         # because in our case it may be invalid because another machine has
