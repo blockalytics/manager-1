@@ -143,7 +143,7 @@ class ScarletLicenseActivation:
         try:
             orig_license_key = r.get(str(node_ip))
         except Exception as e:
-            return False, {"error":"Trouble getting license key from redis"}
+            return False, {"error":"Trouble getting license key from redis with error {}".format(e)}
 
         license_key = orig_license_key.decode()
 

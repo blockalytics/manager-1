@@ -256,14 +256,12 @@ def activate_license(scarlet_id):
         status, response = li.activate_license(scarlet_id,app_name,scarlet_name, remote_ip)
         if not status:
             http_code =404
-            if "pre_existing_activation" in response.keys():
-                http_code =403
             return jsonify({"status": status,"response":response}), http_code
         else:
             http_code = 201
             return jsonify({"status": status,"response":response}), http_code
     else:
-        return jsonify({"app_exists": False}), 404
+        return jsonify({"status": False, "response":"app does not exist"}), 404
 
 # create a new app
 @app.route('/api/' + API_VERSION + '/apps/<app_name>', methods=["POST"])
