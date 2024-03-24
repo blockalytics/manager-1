@@ -73,7 +73,7 @@ class ScarletLicenseActivation:
         )
 
         if not activation_is_required:
-            return True, {"activation_not_required":"license {}".format(validation["meta"]["detail"])}
+            return False, {"license_invalid":"reason : {}, detail: {}".format(validation_code,validation["meta"]["detail"])}
 
         return True,{"activation_required":validation}
 
