@@ -1,4 +1,4 @@
-import machineid, redis,requests, json, os,click,sys
+import machineid, pickle, redis,requests, json, os,click,sys
 from dotenv import load_dotenv
 from pathlib import Path
 from hashlib import sha256
@@ -19,17 +19,48 @@ class ScarletLicenseActivation:
             raise Exception("REDIS_PORT not set in os.environ or manager.env")
         if "REDIS_AUTH_TOKEN" not in os.environ.keys():
             raise Exception("REDIS_AUTH_TOKEN not set in os.environ or manager.env")
-
         if "KEYGEN_ADD_ACC_ID" not in os.environ.keys():
             raise Exception("KEYGEN_ADD_ACC_ID not set in os.environ or manager.env")
+        if "CACHE_EXPIRE_TIME" not in os.environ.keys():
+            raise Exception("CACHE_EXPIRE_TIME not set in os.environ or manager.env")
 
+        self.expireTime = int(os.environ["CACHE_EXPIRE_TIME"])
         self.KEYGEN_ACC_ID = os.environ["KEYGEN_ADD_ACC_ID"]
         self.REDIS_HOST = os.environ["REDIS_HOST"]
         self.REDIS_PORT = os.environ["REDIS_PORT"]
         self.REDIS_PWD = os.environ["REDIS_AUTH_TOKEN"]
 
+    def acquireValidationCache(self,machine_fingerprint,license_key):
+        try:
 
-    def validate_key(self,machine_fingerprint,license_key):
+            r = redis.StrictRedis(
+                host=self.REDIS_HOST,
+                port=int(self.REDIS_PORT),
+                password=str(self.REDIS_PWD),
+            )
+
+        except Exception as e:
+            return False, {
+                "error": "Trouble connecting to redis {}:{} with error {}".format(self.REDIS_HOST, self.REDIS_PORT,
+                                                                                  str(e))}
+
+        if r.exists(str(machine_fingerprint)+"_validation_record"):
+            validation_record_obj = r.get(str(machine_fingerprint + "_validation_record"))
+            validation_record = pickle.loads(validation_record_obj)
+
+        else:
+            print("ValidationCacheMiss machine_fingerprint {}".format(machine_fingerprint))
+            status, response = self.getRemoteValidationRecord(machine_fingerprint, license_key)
+            if not status:
+                return status, response
+
+            validation_record = response["validation_record"]
+
+        r.set(str(machine_fingerprint)+"_validation_record", pickle.dumps(validation_record), ex=self.expireTime )
+
+        return True, {"validation_record":validation_record}
+
+    def getRemoteValidationRecord(self, machine_fingerprint, license_key):
         try:
             validation = requests.post(
                 "https://api.keygen.sh/v1/accounts/{}/licenses/actions/validate-key".format(self.KEYGEN_ACC_ID),
@@ -54,6 +85,40 @@ class ScarletLicenseActivation:
             errs = validation["errors"]
             err_msg = ",".join(map(lambda e: "{} - {}".format(e["title"], e["detail"]).lower(), errs))
             return False, {"error":"license validation failed: {}".format(err_msg)}
+
+        return True, {"validation_record":validation}
+
+
+    def validate_key(self,machine_fingerprint,license_key):
+        status,response = self.acquireValidationCache(machine_fingerprint,license_key)
+        if not status:
+            return status, response
+
+        validation = response["validation_record"]
+        # try:
+        #     validation = requests.post(
+        #         "https://api.keygen.sh/v1/accounts/{}/licenses/actions/validate-key".format(self.KEYGEN_ACC_ID),
+        #         headers={
+        #             "Content-Type": "application/vnd.api+json",
+        #             "Accept": "application/vnd.api+json",
+        #         },
+        #         data=json.dumps(
+        #             {
+        #                 "meta": {
+        #                     "scope": {"fingerprint": machine_fingerprint},
+        #                     "key": license_key,
+        #                 }
+        #             }
+        #         ),
+        #     ).json()
+        #
+        # except Exception as e:
+        #     return False, {"error":"Trouble connecting to the Keygen API for validation POST /validate-key"}
+        #
+        # if "errors" in validation:
+        #     errs = validation["errors"]
+        #     err_msg = ",".join(map(lambda e: "{} - {}".format(e["title"], e["detail"]).lower(), errs))
+        #     return False, {"error":"license validation failed: {}".format(err_msg)}
 
         # If the license is valid for the current machine, that means it has
         # already been activated. We can return early.
